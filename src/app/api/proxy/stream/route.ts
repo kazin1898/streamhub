@@ -31,26 +31,59 @@ export async function GET(request: NextRequest) {
     // Get content type
     const contentType = response.headers.get('content-type') || 'application/octet-stream';
 
-    // Stream the response
-    const reader = response.body?.getReader();
-    if (!reader) {
-      return new Response('Unable to read stream', { status: 500 });
+    // Get the response body as text/bytes
+    const body = await response.arrayBuffer();
+
+    // Check if this is an M3U8 playlist (HLS manifest)
+    const textContent = new TextDecoder().decode(body);
+    if (
+      contentType.includes('mpegurl') ||
+      contentType.includes('m3u8') ||
+      textContent.includes('#EXTM3U')
+    ) {
+      // This is an HLS manifest - we need to rewrite URLs
+      const originalUrl = new URL(streamUrl);
+      const baseUrl = `${originalUrl.protocol}//${originalUrl.host}${originalUrl.pathname.substring(0, originalUrl.pathname.lastIndexOf('/'))}`;
+
+      // Rewrite relative URLs to absolute proxied URLs
+      const rewritten = textContent.split('\n').map(line => {
+        const trimmed = line.trim();
+
+        // Skip empty lines and comments
+        if (!trimmed || trimmed.startsWith('#')) {
+          return line;
+        }
+
+        // Check if this line looks like a URL
+        if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+          // Already absolute URL - proxy it
+          return `/api/proxy/stream?url=${encodeURIComponent(trimmed)}`;
+        } else if (trimmed.includes('.m3u8') || trimmed.includes('.ts')) {
+          // Relative URL - make it absolute and proxy it
+          const absoluteUrl = trimmed.startsWith('/')
+            ? `${originalUrl.protocol}//${originalUrl.host}${trimmed}`
+            : `${baseUrl}/${trimmed}`;
+          return `/api/proxy/stream?url=${encodeURIComponent(absoluteUrl)}`;
+        }
+
+        return line;
+      }).join('\n');
+
+      return new Response(rewritten, {
+        headers: {
+          'Content-Type': 'application/vnd.apple.mpegurl',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+        },
+      });
     }
 
-    const encoder = new TextEncoder();
+    // For non-HLS content, stream directly
     const readableStream = new ReadableStream({
-      async start(controller) {
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            controller.enqueue(value);
-          }
-          controller.close();
-        } catch (error) {
-          console.error('[Stream Proxy] Stream error:', error);
-          controller.error(error);
-        }
+      start(controller) {
+        controller.enqueue(new Uint8Array(body));
+        controller.close();
       },
     });
 
