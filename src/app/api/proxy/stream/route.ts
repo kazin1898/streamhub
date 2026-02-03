@@ -13,59 +13,53 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    console.log('[Stream Proxy] Fetching:', streamUrl.substring(0, 100) + '...');
-
-    // Fetch the stream from the Xtream server
+    // Fetch the stream from the server
     const response = await fetch(streamUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Referer': new URL(streamUrl).origin,
       },
-    });
+    } as RequestInit);
 
     if (!response.ok) {
-      console.error('[Stream Proxy] Error:', response.status, response.statusText);
       return new Response(`Stream error: ${response.status}`, { status: response.status });
     }
 
-    // Get content type
     const contentType = response.headers.get('content-type') || 'application/octet-stream';
 
-    // Get the response body as text/bytes
-    const body = await response.arrayBuffer();
-
-    // Check if this is an M3U8 playlist (HLS manifest)
-    const textContent = new TextDecoder().decode(body);
-    if (
+    // Check if this might be an HLS manifest by content type or URL
+    const isHlsManifest =
       contentType.includes('mpegurl') ||
       contentType.includes('m3u8') ||
-      textContent.includes('#EXTM3U')
-    ) {
-      // This is an HLS manifest - we need to rewrite URLs
+      streamUrl.includes('.m3u8');
+
+    if (isHlsManifest && response.body) {
+      // For HLS manifests, we need to read and rewrite URLs
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let manifest = '';
+      let chunk;
+
+      while (!(chunk = await reader.read()).done) {
+        manifest += decoder.decode(chunk.value, { stream: true });
+      }
+
+      // Rewrite URLs in the manifest
       const originalUrl = new URL(streamUrl);
       const baseUrl = `${originalUrl.protocol}//${originalUrl.host}${originalUrl.pathname.substring(0, originalUrl.pathname.lastIndexOf('/'))}`;
 
-      // Rewrite relative URLs to absolute proxied URLs
-      const rewritten = textContent.split('\n').map(line => {
+      const rewritten = manifest.split('\n').map(line => {
         const trimmed = line.trim();
-
-        // Skip empty lines and comments
-        if (!trimmed || trimmed.startsWith('#')) {
-          return line;
-        }
-
-        // Check if this line looks like a URL
+        if (!trimmed || trimmed.startsWith('#')) return line;
         if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-          // Already absolute URL - proxy it
           return `/api/proxy/stream?url=${encodeURIComponent(trimmed)}`;
-        } else if (trimmed.includes('.m3u8') || trimmed.includes('.ts')) {
-          // Relative URL - make it absolute and proxy it
+        }
+        if (trimmed.includes('.m3u8') || trimmed.includes('.ts')) {
           const absoluteUrl = trimmed.startsWith('/')
             ? `${originalUrl.protocol}//${originalUrl.host}${trimmed}`
             : `${baseUrl}/${trimmed}`;
           return `/api/proxy/stream?url=${encodeURIComponent(absoluteUrl)}`;
         }
-
         return line;
       }).join('\n');
 
@@ -73,26 +67,21 @@ export async function GET(request: NextRequest) {
         headers: {
           'Content-Type': 'application/vnd.apple.mpegurl',
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, OPTIONS',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Cache-Control': 'no-cache',
         },
       });
     }
 
-    // For non-HLS content, stream directly
-    const readableStream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(new Uint8Array(body));
-        controller.close();
-      },
-    });
+    // For non-HLS content, stream directly through
+    if (!response.body) {
+      return new Response('No response body', { status: 500 });
+    }
 
-    return new Response(readableStream, {
+    return new Response(response.body, {
       headers: {
         'Content-Type': contentType,
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Cache-Control': 'no-cache',
       },
     });
   } catch (error) {
