@@ -122,6 +122,8 @@ export default function VideoPlayer({ channel, className = '' }: VideoPlayerProp
   useEffect(() => {
     if (!channel?.url || !videoRef.current) return;
 
+    console.log('[VideoPlayer] Loading channel:', { name: channel.name, url: channel.url, contentType: channel.contentType });
+
     setError(null);
     updatePlayer({ buffering: true });
 
@@ -201,17 +203,21 @@ export default function VideoPlayer({ channel, className = '' }: VideoPlayerProp
       });
 
       hls.on(Hls.Events.ERROR, (_, data) => {
+        console.error('[HLS Error]', data);
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
+              console.error('[HLS] Network error:', data.details, data.fatal);
               setError('Network error - trying to recover...');
               hls.startLoad();
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
+              console.error('[HLS] Media error:', data.details);
               setError('Media error - trying to recover...');
               hls.recoverMediaError();
               break;
             default:
+              console.error('[HLS] Fatal error:', data.type, data.details);
               setError('Fatal error - unable to play stream');
               hls.destroy();
               break;
