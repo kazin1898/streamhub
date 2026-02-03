@@ -300,6 +300,12 @@ export async function fetchXtreamChannels(
   onProgress?: (status: string) => void
 ): Promise<Channel[]> {
   const baseUrl = creds.url.replace(/\/$/, '');
+
+  // Helper to create proxied URL for streams
+  const createStreamUrl = (originalUrl: string) => {
+    return `/api/proxy/stream?url=${encodeURIComponent(originalUrl)}`;
+  };
+
   const allChannels: Channel[] = [];
 
   try {
@@ -349,10 +355,11 @@ export async function fetchXtreamChannels(
     );
 
     (liveStreams || []).forEach((stream: XtreamStream) => {
+      const originalUrl = `${baseUrl}/live/${creds.username}/${creds.password}/${stream.stream_id}.m3u8`;
       allChannels.push({
         id: crypto.randomUUID(),
         name: stream.name,
-        url: `${baseUrl}/live/${creds.username}/${creds.password}/${stream.stream_id}.m3u8`,
+        url: createStreamUrl(originalUrl),
         logo: stream.stream_icon,
         group: (liveCatMap.get(stream.category_id) as string | undefined) || 'Live TV',
         tvgId: String(stream.stream_id),
@@ -374,10 +381,11 @@ export async function fetchXtreamChannels(
 
     (vodStreams || []).forEach((vod: XtreamVOD) => {
       const ext = vod.container_extension || 'mp4';
+      const originalUrl = `${baseUrl}/movie/${creds.username}/${creds.password}/${vod.stream_id}.${ext}`;
       allChannels.push({
         id: crypto.randomUUID(),
         name: vod.name,
-        url: `${baseUrl}/movie/${creds.username}/${creds.password}/${vod.stream_id}.${ext}`,
+        url: createStreamUrl(originalUrl),
         logo: vod.stream_icon,
         group: (vodCatMap.get(vod.category_id) as string | undefined) || 'Movies',
         tvgId: String(vod.stream_id),
@@ -446,6 +454,12 @@ export async function fetchXtreamSeriesEpisodes(
   onProgress?: (status: string) => void
 ): Promise<Channel[]> {
   const baseUrl = creds.url.replace(/\/$/, '');
+
+  // Helper to create proxied URL for streams
+  const createStreamUrl = (originalUrl: string) => {
+    return `/api/proxy/stream?url=${encodeURIComponent(originalUrl)}`;
+  };
+
   const episodes: Channel[] = [];
 
   try {
@@ -481,7 +495,7 @@ export async function fetchXtreamSeriesEpisodes(
           id: crypto.randomUUID(),
           name: title,
           // Xtream API uses episode ID directly in the URL, not series/season/episode
-          url: `${baseUrl}/series/${creds.username}/${creds.password}/${ep.id}.${ext}`,
+          url: createStreamUrl(`${baseUrl}/series/${creds.username}/${creds.password}/${ep.id}.${ext}`),
           logo: seriesInfo.cover,
           group: `${seriesName} - Season ${season}`,
           tvgId: String(ep.id),
