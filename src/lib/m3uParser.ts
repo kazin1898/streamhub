@@ -354,7 +354,7 @@ export async function fetchXtreamChannels(
         name: stream.name,
         url: `${baseUrl}/live/${creds.username}/${creds.password}/${stream.stream_id}.m3u8`,
         logo: stream.stream_icon,
-        group: liveCatMap.get(stream.category_id) || 'Live TV',
+        group: (liveCatMap.get(stream.category_id) as string | undefined) || 'Live TV',
         tvgId: String(stream.stream_id),
         contentType: 'live',
       });
@@ -379,7 +379,7 @@ export async function fetchXtreamChannels(
         name: vod.name,
         url: `${baseUrl}/movie/${creds.username}/${creds.password}/${vod.stream_id}.${ext}`,
         logo: vod.stream_icon,
-        group: vodCatMap.get(vod.category_id) || 'Movies',
+        group: (vodCatMap.get(vod.category_id) as string | undefined) || 'Movies',
         tvgId: String(vod.stream_id),
         contentType: 'movie',
         rating: vod.rating,
@@ -407,7 +407,7 @@ export async function fetchXtreamChannels(
         name: series.name,
         url: '', // Will be filled when user selects the series
         logo: series.cover,
-        group: seriesCatMap.get(series.category_id) || 'Series',
+        group: (seriesCatMap.get(series.category_id) as string | undefined) || 'Series',
         tvgId: String(series.series_id),
         contentType: 'series',
         seriesId: String(series.series_id),
