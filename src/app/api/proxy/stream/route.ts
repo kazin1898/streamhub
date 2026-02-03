@@ -67,7 +67,8 @@ export async function GET(request: NextRequest) {
         headers: {
           'Content-Type': 'application/vnd.apple.mpegurl',
           'Access-Control-Allow-Origin': '*',
-          'Cache-Control': 'no-cache',
+          // Cache manifests for 5 seconds - they update frequently for live streams
+          'Cache-Control': 'max-age=5',
         },
       });
     }
@@ -81,7 +82,8 @@ export async function GET(request: NextRequest) {
       headers: {
         'Content-Type': contentType,
         'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'no-cache',
+        // Cache video segments for 1 hour - they don't change
+        'Cache-Control': 'max-age=3600, public',
       },
     });
   } catch (error) {
