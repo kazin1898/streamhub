@@ -39,6 +39,9 @@ yarn-error.log*
 # claude code ide
 .claude
 
+# cloudflare-worker node_modules
+cloudflare-worker/node_modules
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
