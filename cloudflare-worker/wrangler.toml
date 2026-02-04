@@ -1,0 +1,11 @@
+name = "streamhub-proxy"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+# Add your domain here if needed
+# ALLOWED_ORIGIN = "https://your-domain.com"
+
+[[routes]]
+pattern = "https://your-worker-url.workers.dev/*"
+zone_name = "your-domain.com"

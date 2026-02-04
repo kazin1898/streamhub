@@ -1,0 +1,14 @@
+{
+  "name": "streamhub-proxy",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker proxy for StreamHub IPTV streams",
+  "main": "src/index.js",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

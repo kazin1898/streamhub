@@ -5,6 +5,10 @@ interface M3UParseResult {
   errors: string[];
 }
 
+// Proxy URL for streams - can be overridden with environment variable
+// Set NEXT_PUBLIC_STREAM_PROXY_URL in Vercel to use Cloudflare Worker
+const STREAM_PROXY_URL = process.env.NEXT_PUBLIC_STREAM_PROXY_URL || '/api/proxy/stream';
+
 // Keywords to detect content type
 const MOVIE_KEYWORDS = ['filme', 'filmes', 'movie', 'movies', 'vod', 'cinema', '4k filme', 'lançamento', 'lancamento'];
 const SERIES_KEYWORDS = ['série', 'series', 'séries', 'serie', 'temporada', 'episodio', 'episódio', 's0', 'e0', 'season', 'episode'];
@@ -303,7 +307,7 @@ export async function fetchXtreamChannels(
 
   // Helper to create proxied URL for streams
   const createStreamUrl = (originalUrl: string) => {
-    return `/api/proxy/stream?url=${encodeURIComponent(originalUrl)}`;
+    return `${STREAM_PROXY_URL}?url=${encodeURIComponent(originalUrl)}`;
   };
 
   const allChannels: Channel[] = [];
@@ -459,7 +463,7 @@ export async function fetchXtreamSeriesEpisodes(
 
   // Helper to create proxied URL for streams
   const createStreamUrl = (originalUrl: string) => {
-    return `/api/proxy/stream?url=${encodeURIComponent(originalUrl)}`;
+    return `${STREAM_PROXY_URL}?url=${encodeURIComponent(originalUrl)}`;
   };
 
   const episodes: Channel[] = [];
