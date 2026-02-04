@@ -360,6 +360,7 @@ export async function fetchXtreamChannels(
         id: crypto.randomUUID(),
         name: stream.name,
         url: createStreamUrl(originalUrl),
+        originalUrl, // Store original for direct connection attempt
         logo: stream.stream_icon,
         group: (liveCatMap.get(stream.category_id) as string | undefined) || 'Live TV',
         tvgId: String(stream.stream_id),
@@ -386,6 +387,7 @@ export async function fetchXtreamChannels(
         id: crypto.randomUUID(),
         name: vod.name,
         url: createStreamUrl(originalUrl),
+        originalUrl, // Store original for direct connection attempt
         logo: vod.stream_icon,
         group: (vodCatMap.get(vod.category_id) as string | undefined) || 'Movies',
         tvgId: String(vod.stream_id),
@@ -496,6 +498,7 @@ export async function fetchXtreamSeriesEpisodes(
           name: title,
           // Xtream API uses episode ID directly in the URL, not series/season/episode
           url: createStreamUrl(`${baseUrl}/series/${creds.username}/${creds.password}/${ep.id}.${ext}`),
+          originalUrl: `${baseUrl}/series/${creds.username}/${creds.password}/${ep.id}.${ext}`, // Store original
           logo: seriesInfo.cover,
           group: `${seriesName} - Season ${season}`,
           tvgId: String(ep.id),

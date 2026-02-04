@@ -14,6 +14,8 @@ export interface Channel {
   tvgName?: string;
   isFavorite?: boolean;
   contentType: ContentType;
+  // Original URL before proxy (for direct connection attempt)
+  originalUrl?: string;
   // VOD specific
   year?: string;
   rating?: string;

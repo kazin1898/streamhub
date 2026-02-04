@@ -150,7 +150,12 @@ export default function VideoPlayer({ channel, className = '' }: VideoPlayerProp
       const hls = new Hls(hlsConfig);
       hlsRef.current = hls;
 
-      hls.loadSource(channel.url);
+      // Try original URL first (direct connection - faster), fall back to proxy
+      const urlToTry = channel.originalUrl || channel.url;
+      let usingProxy = !channel.originalUrl;
+      let retryAttempted = false;
+
+      hls.loadSource(urlToTry);
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
@@ -204,12 +209,27 @@ export default function VideoPlayer({ channel, className = '' }: VideoPlayerProp
 
       hls.on(Hls.Events.ERROR, (_, data) => {
         console.error('[HLS Error]', data);
+
+        // If we tried direct URL and got a network error, fall back to proxy
+        if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR && !retryAttempted && channel.originalUrl) {
+          console.log('[HLS] Direct connection failed, trying proxy...');
+          retryAttempted = true;
+          usingProxy = true;
+          setError(null);
+          hls.loadSource(channel.url);
+          return;
+        }
+
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              console.error('[HLS] Network error:', data.details, data.fatal);
-              setError('Network error - trying to recover...');
-              hls.startLoad();
+              console.error('[HLS] Network error:', data.details);
+              setError(usingProxy ? 'Network error - stream unavailable' : 'Network error - trying proxy...');
+              if (!usingProxy && channel.originalUrl) {
+                hls.loadSource(channel.url);
+              } else {
+                hls.startLoad();
+              }
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
               console.error('[HLS] Media error:', data.details);
